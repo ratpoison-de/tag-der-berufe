@@ -1601,7 +1601,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 <footer class="credit">
   Web-App erstellt von <b>Thorsten von Plotho-Kettner</b><br>
   Pater-Alois-Grimm-Schule Külsheim · Lerngruppe 9<br>
-  <span style="font-size:12px">Daten: jobNOK / Tag der Berufe-Map, Stand 28.09.2026 · Karte: © OpenStreetMap-Mitwirkende, © CARTO · Schrift: Barlow (SIL OFL)</span>
+  <span style="font-size:12px">Daten: jobNOK / Tag der Berufe-Map, Stand 28.09.2026 · Karte: © OpenStreetMap-Mitwirkende · Schrift: Barlow (SIL OFL)</span>
 </footer>
 </main>
 
@@ -2233,9 +2233,19 @@ function ensureMap(){
   host.innerHTML = '<div id="map" aria-label="Lageplan Tag der Berufe"></div>';
   var map = L.map('map', {zoomControl:true, scrollWheelZoom:true});
   MAP.map = map;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    subdomains:'abcd', maxZoom:20, attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
-  }).addTo(map);
+  // Kartenkacheln: OpenStreetMap (ohne API-Schlüssel). Fallback: OSM-Server Deutschland.
+  var OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende';
+  var tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:OSM_ATTR}).addTo(map);
+  var tileOK = 0, tileErr = 0, switched = false;
+  tiles.on('tileload', function(){ tileOK++; });
+  tiles.on('tileerror', function(){
+    tileErr++;
+    if (!switched && tileOK === 0 && tileErr >= 4){
+      switched = true;
+      map.removeLayer(tiles);
+      L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {maxZoom:19, attribution:OSM_ATTR + ' · Server: openstreetmap.de'}).addTo(map);
+    }
+  });
   MAP.bus = L.layerGroup();
   ROUTES.forEach(function(r){
     var pts = r.stops.map(function(id){ return [STOPS[id].lat, STOPS[id].lng]; });
